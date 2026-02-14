@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WNS Café Menu</title>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #fdf6e3;
+  margin: 0;
+  padding: 0;
+  direction: rtl;
+}
+.container {
+  max-width: 1200px;
+  margin: auto;
+  padding: 20px;
+}
+h2 {
+  color: #6b4226;
+  margin-top: 40px;
+}
+.products {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 15px;
+}
+.card {
+  background: #fff8f0;
+  border-radius: 10px;
+  padding: 15px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  transition: transform 0.2s;
+}
+.card:hover {
+  transform: scale(1.05);
+}
+.card h3 {
+  margin: 0 0 10px;
+  font-size: 18px;
+  color: #8b4513;
+}
+.card p {
+  margin: 0 0 10px;
+  font-size: 16px;
+  color: #333;
+}
+.card button {
+  background: #6b4226;
+  color: #fff;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-right: 5px;
+}
+.card button:hover {
+  background: #8b4513;
+}
+.modal {
+  display: none;
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.5);
+  justify-content: center;
+  align-items: center;
+}
+.modal-content {
+  background: #fff;
+  padding: 20px;
+  border-radius: 10px;
+  max-width: 500px;
+  width: 90%;
+  position: relative;
+}
+.close {
+  position: absolute;
+  top: 10px;
+  left: 15px;
+  font-size: 22px;
+  cursor: pointer;
+}
+.cart-item {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>قائمة WNS Café</h1>
+
+  <!-- المنتجات -->
+  <div id="menu"></div>
+
+  <!-- مودال السلة -->
+  <div id="cartModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeCart()">&times;</span>
+      <h2>السلة</h2>
+      <div id="cartItems"></div>
+      <p id="totalPrice"></p>
+      <button onclick="orderCartWhatsApp()">اطلب السلة عبر واتساب</button>
+    </div>
+  </div>
+
+  <button onclick="showCart()" style="margin-top:20px; background:#8b4513; color:white; padding:10px 20px; border:none; border-radius:5px; cursor:pointer;">عرض السلة</button>
+</div>
+
+<script>
+const products = [
+  // Hot Drinks
+  {id:1, category:"Hot Drinks", name:"شاي عاده", price:10},
+  {id:2, category:"Hot Drinks", name:"شاي فتله", price:15},
+  {id:3, category:"Hot Drinks", name:"شاي حليب", price:30},
+  {id:4, category:"Hot Drinks", name:"شاي فليفر", price:15},
+  {id:5, category:"Hot Drinks", name:"نعناع", price:15},
+  {id:6, category:"Hot Drinks", name:"كركديه", price:15},
+  {id:7, category:"Hot Drinks", name:"ينسون", price:15},
+  {id:8, category:"Hot Drinks", name:"خلطه", price:20},
+  {id:9, category:"Hot Drinks", name:"قرفه", price:15},
+  {id:10, category:"Hot Drinks", name:"قرفه حليب", price:30},
+  {id:11, category:"Hot Drinks", name:"سحلب", price:35},
+  {id:12, category:"Hot Drinks", name:"سحلب مكسرات", price:45},
+  {id:13, category:"Hot Drinks", name:"سحلب فواكه", price:45},
+  {id:14, category:"Hot Drinks", name:"هوت سيدر (تفاح _ برتقال)", price:30},
+  {id:15, category:"Hot Drinks", name:"هوت شوكليت", price:50},
+  {id:16, category:"Hot Drinks", name:"هوت اوريو", price:60},
+  {id:17, category:"Hot Drinks", name:"هوت لوتس", price:60},
+  {id:18, category:"Hot Drinks", name:"هوت شوكليت (اي نوع شوكليت من اختيارك)", price:65},
+
+  // Turkish Coffee
+  {id:19, category:"Turkish Coffee", name:"فاتح ساده D", price:25},
+  {id:20, category:"Turkish Coffee", name:"فاتح ساده S", price:35},
+  {id:21, category:"Turkish Coffee", name:"وسط سادة D", price:25},
+  {id:22, category:"Turkish Coffee", name:"وسط سادة S", price:35},
+  {id:23, category:"Turkish Coffee", name:"غامق سادة D", price:25},
+  {id:24, category:"Turkish Coffee", name:"غامق سادة S", price:35},
+  {id:25, category:"Turkish Coffee", name:"فاتح محوج D", price:30},
+  {id:26, category:"Turkish Coffee", name:"فاتح محوج S", price:40},
+  {id:27, category:"Turkish Coffee", name:"وسط محوج D", price:30},
+  {id:28, category:"Turkish Coffee", name:"وسط محوج S", price:40},
+  {id:29, category:"Turkish Coffee", name:"غامق محوج D", price:30},
+  {id:30, category:"Turkish Coffee", name:"غامق محوج S", price:40},
+
+  // French Coffee
+  {id:31, category:"French Coffee", name:"فرنساوي عاده", price:35},
+  {id:32, category:"French Coffee", name:"بندق", price:45},
+  {id:33, category:"French Coffee", name:"كراميل", price:45},
+  {id:34, category:"French Coffee", name:"نوتيلا", price:40},
+  {id:35, category:"French Coffee", name:"لوتس", price:40},
+  {id:36, category:"French Coffee", name:"فراوله", price:40},
+  {id:37, category:"French Coffee", name:"نسكافيه بلاك", price:25},
+  {id:38, category:"French Coffee", name:"نسكافيه بلبن", price:40},
+  {id:39, category:"French Coffee", name:"كوفي مكس", price:15},
+  {id:40, category:"French Coffee", name:"كوفي مكس بلبن", price:30},
+  // Italian Coffee
+  {id:41, category:"Italian Coffee", name:"اسبريسو سنجل", price:30},
+  {id:42, category:"Italian Coffee", name:"اسبريسو دبل", price:40},
+  {id:43, category:"Italian Coffee", name:"ميكاتو سنجل", price:35},
+  {id:44, category:"Italian Coffee", name:"ميكاتو دبل", price:45},
+  {id:45, category:"Italian Coffee", name:"كورتادو", price:50},
+  {id:46, category:"Italian Coffee", name:"فلات وايت", price:50},
+  {id:47, category:"Italian Coffee", name:"أفوجاتو", price:40}, 
+  {id:48, category:"Italian Coffee", name:"لاتيه", price:55},
+  {id:49, category:"Italian Coffee", name:"سبانش لاتيه", price:60},
+  {id:50, category:"Italian Coffee", name:"كابتشينو", price:55},
+  {id:51, category:"Italian Coffee", name:"موكا (دارك/وايت)", price:60},
+  {id:52, category:"Italian Coffee", name:"أميركان", price:35},
+
+  // Ice Italian Coffee
+  {id:53, category:"Ice Italian Coffee", name:"ايس لاتيه", price:60},
+  {id:54, category:"Ice Italian Coffee", name:"ايس سبانش لاتيه", price:70},
+  {id:55, category:"Ice Italian Coffee", name:"ايس كابتشينو", price:60},
+  {id:56, category:"Ice Italian Coffee", name:"ايس كراميل ميكاتو", price:65},
+  {id:57, category:"Ice Italian Coffee", name:"ايس موكا (دارك/وايت)", price:70},
+  {id:58, category:"Ice Italian Coffee", name:"ايس أميركان", price:45},
+// Juice
+{id:59, category:"Juice", name:"عصير مانجو", price:40},
+{id:60, category:"Juice", name:"عصير فراولة", price:40},
+{id:61, category:"Juice", name:"كيوي", price:50},
+{id:62, category:"Juice", name:"بلح باللبن", price:40},
+{id:63, category:"Juice", name:"بلح باللبن مكسرات", price:55},
+{id:64, category:"Juice", name:"رمان", price:40},
+{id:65, category:"Juice", name:"برتقال", price:40},
+{id:66, category:"Juice", name:"جوافة", price:35},
+{id:67, category:"Juice", name:"جوافة باللبن", price:45},
+{id:68, category:"Juice", name:"ليمون", price:35},
+{id:69, category:"Juice", name:"ليمون نعناع", price:40},
+{id:70, category:"Juice", name:"موز", price:40},
+{id:71, category:"Juice", name:"بطيخ", price:40},
+
+// Fresh Cocktails
+{id:72, category:"Cocktails", name:"فلوريدا", price:50},
+{id:73, category:"Cocktails", name:"هاواي", price:60},
+{id:74, category:"Cocktails", name:"كامبا", price:60},
+{id:75, category:"Cocktails", name:"ريد كوكتيل", price:55},
+{id:76, category:"Cocktails", name:"طوفي", price:55},
+{id:77, category:"Cocktails", name:"ريد منت", price:50},
+{id:78, category:"Cocktails", name:"فريش WNS", price:65},
+
+// Smoothie
+{id:79, category:"Smoothie", name:"سموثي مانجو", price:50},
+{id:80, category:"Smoothie", name:"سموثي فراولة", price:45},
+{id:81, category:"Smoothie", name:"سموثي بطيخ", price:45},
+{id:82, category:"Smoothie", name:"سموثي ليمون", price:40},
+{id:83, category:"Smoothie", name:"سموثي ليمون نعناع", price:45},
+{id:84, category:"Smoothie", name:"سموثي خوخ", price:50},
+{id:85, category:"Smoothie", name:"سموثي أناناس", price:45},
+{id:86, category:"Smoothie", name:"باشون فروت", price:50},
+{id:87, category:"Smoothie", name:"بلو بيري", price:45},
+{id:88, category:"Smoothie", name:"مكس بيري", price:45},
+{id:89, category:"Smoothie", name:"كيوي", price:50},
+{id:90, category:"Smoothie", name:"تفاح أخضر", price:40},
+{id:91, category:"Smoothie", name:"كريز", price:40},
+
+// Frappe
+{id:92, category:"Frappe", name:"فرابيه فانيليا", price:50},
+{id:93, category:"Frappe", name:"فرابيه شوكليت", price:50},
+{id:94, category:"Frappe", name:"فرابيه كوفي", price:50},
+{id:95, category:"Frappe", name:"فرابيه بندق", price:55},
+{id:96, category:"Frappe", name:"فرابيه كراميل", price:55},
+{id:97, category:"Frappe", name:"فرابيه لوتس", price:55},
+{id:98, category:"Frappe", name:"فرابيه نوتيلا", price:55},
+{id:99, category:"Frappe", name:"فرابيه أوريو", price:60},
+{id:100, category:"Frappe", name:"فرابيه فراولة", price:55},
+{id:101, category:"Frappe", name:"فرابيه موز", price:55},
+{id:102, category:"Frappe", name:"فرابيه باشون", price:55},
+{id:103, category:"Frappe", name:"فرابيه مانجو", price:55},
+
+// Soda Mixes
+{id:104, category:"Soda Mixes", name:"موهيتو كلاسيك", price:50},
+{id:105, category:"Soda Mixes", name:"موهيتو شعير", price:60},
+{id:106, category:"Soda Mixes", name:"موهيتو فليفر", price:55},
+{id:107, category:"Soda Mixes", name:"سكوتش منت", price:50},
+{id:108, category:"Soda Mixes", name:"صن شاين", price:60},
+{id:109, category:"Soda Mixes", name:"صن رايز", price:60},
+{id:110, category:"Soda Mixes", name:"بلو باشون", price:60},
+{id:111, category:"Soda Mixes", name:"بلو سكاي", price:60},
+{id:112, category:"Soda Mixes", name:"بينا كولادا", price:60},
+{id:113, category:"Soda Mixes", name:"شيري كولا", price:60},
+
+// Milkshake
+{id:114, category:"Milkshake", name:"ميلك شيك فانيليا", price:50},
+{id:115, category:"Milkshake", name:"ميلك شيك شوكليت", price:50},
+{id:116, category:"Milkshake", name:"ميلك شيك أوريو", price:60},
+{id:117, category:"Milkshake", name:"ميلك شيك لوتس", price:60},
+{id:118, category:"Milkshake", name:"هوهوز", price:60},
+{id:119, category:"Milkshake", name:"توينكز", price:60},
+{id:120, category:"Milkshake", name:"ميلك شيك كراميل", price:55},
+{id:121, category:"Milkshake", name:"ميلك شيك بندق", price:65},
+{id:122, category:"Milkshake", name:"ميلك شيك جالاكسي", price:65},
+{id:123, category:"Milkshake", name:"ميلك شيك كيت كات", price:65},
+{id:124, category:"Milkshake", name:"ميلك شيك مانجو", price:55},
+{id:125, category:"Milkshake", name:"ميلك شيك فراولة", price:55},
+{id:126, category:"Milkshake", name:"ميلك شيك كريز", price:55},
+{id:127, category:"Milkshake", name:"ميلك شيك باشون", price:55},
+{id:128, category:"Milkshake", name:"ميلك شيك أناناس", price:55},
+{id:129, category:"Milkshake", name:"ميلك شيك بلو بيري", price:55},
+{id:130, category:"Milkshake", name:"ميلك شيك مكس بيري", price:55},
+{id:131, category:"Milkshake", name:"ميلك شيك خوخ", price:60},
+{id:132, category:"Milkshake", name:"ميلك شيك تفاح أخضر", price:55},
+{id:133, category:"Milkshake", name:"ميلك شيك كيوي", price:60},
+{id:134, category:"Milkshake", name:"ميلك شيك WNS", price:70},
+
+// Zabadoo
+{id:135, category:"Zabadoo", name:"زبادو مانجو", price:65},
+{id:136, category:"Zabadoo", name:"زبادو فراولة", price:60},
+{id:137, category:"Zabadoo", name:"زبادو أناناس", price:60},
+{id:138, category:"Zabadoo", name:"زبادو خوخ", price:65},
+{id:139, category:"Zabadoo", name:"زبادو بلو بيري", price:60},
+{id:140, category:"Zabadoo", name:"زبادو باشون فروت", price:65},
+{id:141, category:"Zabadoo", name:"زبادو مكس بيري", price:60},
+{id:142, category:"Zabadoo", name:"زبادو تفاح", price:60},
+{id:143, category:"Zabadoo", name:"زبادو كيوي", price:65},
+{id:144, category:"Zabadoo", name:"زبادي عسل", price:55},
+
+// Dessert
+{id:145, category:"Dessert", name:"وافل نوتيلا", price:60},
+{id:146, category:"Dessert", name:"وافل وايت", price:60},
+{id:147, category:"Dessert", name:"وافل لوتس", price:65},
+{id:148, category:"Dessert", name:"وافل بستاشيو", price:70},
+{id:149, category:"Dessert", name:"وافل مكس", price:70},
+{id:150, category:"Dessert", name:"WNS Waffle (4 أنواع)", price:75},
+{id:151, category:"Dessert", name:"مولتن كيك", price:55},
+{id:152, category:"Dessert", name:"ميني تورتة", price:65},
+{id:153, category:"Dessert", name:"دونتس", price:35},
+{id:154, category:"Dessert", name:"دونتس بستاشيو", price:40},
+{id:155, category:"Dessert", name:"شيز كيك", price:50},
+{id:156, category:"Dessert", name:"شيز كيك بستاشيو", price:55},
+
+// Soft Drinks
+{id:157, category:"Soft Drinks", name:"بيبسي", price:25},
+{id:158, category:"Soft Drinks", name:"سفن", price:25},
+{id:159, category:"Soft Drinks", name:"ميرندا", price:25},
+{id:160, category:"Soft Drinks", name:"ستينج", price:25},
+{id:161, category:"Soft Drinks", name:"فيروز", price:25},
+{id:162, category:"Soft Drinks", name:"Vcola", price:25},
+{id:163, category:"Soft Drinks", name:"بريل", price:30},
+{id:164, category:"Soft Drinks", name:"ريدبل", price:70},
+
+// Extras
+{id:165, category:"Extras", name:"صوص إضافي", price:10},
+{id:166, category:"Extras", name:"مارشميلو", price:10},
+{id:167, category:"Extras", name:"سيرب فليفر", price:15},
+{id:168, category:"Extras", name:"حليب مكثف", price:15},
+{id:169, category:"Extras", name:"مكسرات", price:20},
+{id:170, category:"Extras", name:"بوبا", price:30},
+{id:171, category:"Extras", name:"كب تلج مع فليفر", price:10}
+ 
+ ];
+
+const menuContainer = document.getElementById('menu');
+let cart = [];
+const whatsappNumber = "201028275135";
+
+function renderMenu() {
+  const categories = [...new Set(products.map(p => p.category))];
+  categories.forEach(cat => {
+    const section = document.createElement('div');
+    const title = document.createElement('h2');
+    title.textContent = cat;
+    section.appendChild(title);
+
+    const prodGrid = document.createElement('div');
+    prodGrid.className = 'products';
+
+    products.filter(p => p.category === cat).forEach(product => {
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.innerHTML = `
+        <h3>${product.name}</h3>
+        <p>السعر: ${product.price} جنيه</p>
+        <button onclick="addToCart(${product.id})">أضف إلى السلة</button>
+        <button onclick="orderWhatsApp(${product.id})">اطلب عبر واتساب</button>
+      `;
+      prodGrid.appendChild(card);
+    });
+
+    section.appendChild(prodGrid);
+    menuContainer.appendChild(section);
+  });
+}
+
+function addToCart(id) {
+  const item = products.find(p => p.id === id);
+  cart.push(item);
+  alert(`${item.name} تمت إضافته إلى السلة`);
+}
+
+function showCart() {
+  document.getElementById('cartModal').style.display = 'flex';
+  const cartDiv = document.getElementById('cartItems');
+  cartDiv.innerHTML = '';
+  let total = 0;
+  cart.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'cart-item';
+    div.textContent = `${item.name} - ${item.price} جنيه`;
+    cartDiv.appendChild(div);
+    total += item.price;
+  });
+  document.getElementById('totalPrice').textContent = `المجموع: ${total} جنيه`;
+}
+
+function closeCart() {
+  document.getElementById('cartModal').style.display = 'none';
+}
+
+function orderWhatsApp(id) {
+  const item = products.find(p => p.id === id);
+  const message = `مرحبا، أريد طلب المنتج: ${item.name} بسعر ${item.price} جنيه`;
+  const url = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+  window.open(url, '_blank');
+}
+
+function orderCartWhatsApp() {
+  if(cart.length === 0){
+    alert("السلة فارغة");
+    return;
+  }
+  let message = "مرحبا، أريد طلب هذه المنتجات:\n";
+  cart.forEach(item => {
+    message += `- ${item.name} : ${item.price} جنيه\n`;
+  });
+  const url = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+  window.open(url, '_blank');
+}
+
+renderMenu();
+</script>
+</body>
+</html>
